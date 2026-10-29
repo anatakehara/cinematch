@@ -5,6 +5,9 @@ import numpy as np
 import pandas as pd
 from scipy.sparse import load_npz
 
+import re
+import unicodedata
+
 ARTIFACTS = Path(__file__).resolve().parent.parent / "artifacts"
 POSTER_BASE = "https://image.tmdb.org/t/p/w500"
 
@@ -14,7 +17,11 @@ def _conjunto(texto, limite=None):
     itens = [i for i in texto.split("|") if i and i != "(no genres listed)"]
     return set(itens[:limite] if limite else itens)
 
-
+def _normalizar(texto):
+    texto = unicodedata.normalize("NFKD", texto)
+    texto = "".join(c for c in texto if not unicodedata.combining(c))
+    return re.sub(r"[^a-z0-9 ]", " ", texto.lower()).split()
+  
 class Recommender:
     def __init__(self, artifacts_dir=ARTIFACTS):
         d = Path(artifacts_dir)
@@ -36,12 +43,18 @@ class Recommender:
         self._generos = [_conjunto(g) for g in self.movies["genres"]]
         self._diretores = [_conjunto(x) for x in self.movies["director"]]
         self._elencos = [_conjunto(x, 3) for x in self.movies["cast"]]
+        self._tokens_titulo = [_normalizar(t) for t in self.movies["title"]]
 
     def search(self, trecho, n=8):
-        mask = self.movies["title"].str.contains(trecho, case=False, regex=False).values
-        achados = np.where(mask)[0]
-        achados = achados[np.argsort(-self.n_aval[achados])][:n]
-        return [self._ficha(i) for i in achados]
+        termos = _normalizar(trecho)
+        if not termos:
+            return []
+        achados = [
+            i for i, tokens in enumerate(self._tokens_titulo)
+            if all(any(t.startswith(q) for t in tokens) for q in termos)
+        ]
+        achados.sort(key=lambda i: -self.n_aval[i])
+        return [self._ficha(i) for i in achados[:n]]
 
     def find_id(self, trecho):
         achados = self.search(trecho, n=1)
