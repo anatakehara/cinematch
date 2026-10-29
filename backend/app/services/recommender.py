@@ -119,20 +119,22 @@ class Recommender:
             origens.append(ordem[1])
         titulos = [self.movies.iloc[idx[o]]["title"] for o in origens]
 
-        base = idx[melhor]
-        partes = []
-        diretor = self._diretores[j] & self._diretores[base]
-        elenco = self._elencos[j] & self._elencos[base]
-        generos = self._generos[j] & self._generos[base]
-        if diretor:
-            partes.append("mesmo diretor (" + ", ".join(sorted(diretor)) + ")")
-        if elenco:
-            partes.append("elenco em comum (" + ", ".join(sorted(elenco)[:2]) + ")")
-        if generos:
-            partes.append("gêneros em comum (" + ", ".join(sorted(generos)[:3]) + ")")
+        texto = "Porque você gostou de " + " e ".join(titulos) + "."
 
-        texto = "Porque você gostou de " + " e ".join(titulos)
-        texto += (": " + "; ".join(partes) + ".") if partes else "."
+        for o, titulo in zip(origens, titulos):
+            base = idx[o]
+            partes = []
+            diretor = self._diretores[j] & self._diretores[base]
+            elenco = self._elencos[j] & self._elencos[base]
+            generos = self._generos[j] & self._generos[base]
+            if diretor:
+                partes.append("mesmo diretor (" + ", ".join(sorted(diretor)) + ")")
+            if elenco:
+                partes.append("elenco em comum (" + ", ".join(sorted(elenco)[:2]) + ")")
+            if generos:
+                partes.append("gêneros em comum (" + ", ".join(sorted(generos)[:3]) + ")")
+            if partes:
+                texto += f" Em comum com {titulo}: " + "; ".join(partes) + "."
 
         if cf[melhor] >= ct[melhor]:
             esse = "esse filme" if len(titulos) == 1 else "esses filmes"
