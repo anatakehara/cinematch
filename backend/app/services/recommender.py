@@ -44,6 +44,10 @@ class Recommender:
         self._diretores = [_conjunto(x) for x in self.movies["director"]]
         self._elencos = [_conjunto(x, 3) for x in self.movies["cast"]]
         self._tokens_titulo = [_normalizar(t) for t in self.movies["title"]]
+        self._anos = pd.to_numeric(
+        self.movies["release_date"].str[:4], errors="coerce").to_numpy()
+        self._notas = pd.to_numeric(self.movies["vote_average"], errors="coerce").fillna(0).to_numpy()
+        self.generos_disponiveis = sorted(set().union(*self._generos))
 
     def search(self, trecho, n=8):
         termos = _normalizar(trecho)
@@ -63,7 +67,10 @@ class Recommender:
     def title(self, movie_id):
         return self.movies.iloc[int(self.pos[movie_id])]["title"]
 
-    def recommend(self, liked_ids, n=10, alpha=None, min_avaliacoes=None):
+    def recommend(
+        self, liked_ids, n=10, alpha=None, min_avaliacoes=None,
+        generos=None, ano_min=None, ano_max=None, nota_min=None,
+    ):
         alpha = self.alpha if alpha is None else alpha
         min_aval = self.min_aval if min_avaliacoes is None else min_avaliacoes
 
@@ -80,10 +87,15 @@ class Recommender:
         z_cf, sd_cf = self._z(self.collab @ perfil_cf)
         score = alpha * z_ct + (1 - alpha) * z_cf
 
-        score[idx] = -np.inf
+        score[idx] = -np.inf 
         score[self.n_aval < min_aval] = -np.inf
+        score[~self._filtro(generos, ano_min, ano_max, nota_min)] = -np.inf
 
-        n = max(1, min(n, int(np.isfinite(score).sum())))
+        disponiveis = int(np.isfinite(score).sum())
+        if disponiveis == 0:
+            return []
+        n = min(n, disponiveis)
+
         top = np.argpartition(-score, n - 1)[:n]
         top = top[np.argsort(-score[top])]
 
@@ -120,6 +132,19 @@ class Recommender:
             "genres": sorted(self._generos[i]),
             "poster_url": f"{POSTER_BASE}{poster}" if poster else None,
         }
+    
+    def _filtro(self, generos, ano_min, ano_max, nota_min):
+        ok = np.ones(len(self.movie_ids), dtype=bool)
+        if generos:
+            escolhidos = set(generos)
+            ok &= np.array([bool(g & escolhidos) for g in self._generos])
+        if ano_min is not None:
+            ok &= self._anos >= ano_min
+        if ano_max is not None:
+            ok &= self._anos <= ano_max
+        if nota_min:
+            ok &= self._notas >= nota_min
+        return ok
 
     def _explicar(self, j, idx, col, ct, cf):
         ordem = np.argsort(-col)

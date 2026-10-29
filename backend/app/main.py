@@ -34,6 +34,10 @@ app.add_middleware(
 @app.get("/health")
 def health():
     return {"status": "ok", "filmes": len(modelo["rec"].movie_ids)}
+  
+@app.get("/genres", response_model=list[str])
+def genres():
+    return modelo["rec"].generos_disponiveis
 
 
 @app.get("/search", response_model=list[Filme])
@@ -53,6 +57,14 @@ def similar(movie_id: int, n: int = Query(10, ge=1, le=30)):
 def recommend(pedido: PedidoRecomendacao):
     rec = modelo["rec"]
     try:
-        return rec.recommend(pedido.liked_ids, n=pedido.n, alpha=pedido.alpha)
+        return rec.recommend(
+            pedido.liked_ids,
+            n=pedido.n,
+            alpha=pedido.alpha,
+            generos=pedido.generos,
+            ano_min=pedido.decada,
+            ano_max=pedido.decada + 9 if pedido.decada else None,
+            nota_min=pedido.nota_min,
+        )
     except ValueError as erro:
         raise HTTPException(status_code=422, detail=str(erro))

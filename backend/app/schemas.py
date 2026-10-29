@@ -21,3 +21,6 @@ class PedidoRecomendacao(BaseModel):
         None, ge=0, le=1,
         description="Peso do conteúdo (0 = só colaborativo, 1 = só conteúdo).",
     )
+    generos: list[str] | None = Field(None, max_length=10)
+    decada: int | None = Field(None, ge=1900, le=2020, description="Ex.: 1990")
+    nota_min: float | None = Field(None, ge=0, le=10)
