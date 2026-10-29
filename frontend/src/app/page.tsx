@@ -1,40 +1,76 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import SearchBar from "@/components/SearchBar";
+import type { Filme } from "@/lib/api";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
+const MAX_FAVORITOS = 5;
 
 export default function Home() {
-  const [status, setStatus] = useState<"carregando" | "ok" | "erro">("carregando");
-  const [filmes, setFilmes] = useState<number | null>(null);
+  const [favoritos, setFavoritos] = useState<Filme[]>([]);
 
-  useEffect(() => {
-    fetch(`${API_URL}/health`)
-      .then((resposta) => resposta.json())
-      .then((dados) => {
-        setFilmes(dados.filmes);
-        setStatus("ok");
-      })
-      .catch(() => setStatus("erro"));
-  }, []);
+  function adicionar(filme: Filme) {
+    setFavoritos((atuais) => {
+      const jaTem = atuais.some((f) => f.movieId === filme.movieId);
+      if (jaTem || atuais.length >= MAX_FAVORITOS) return atuais;
+      return [...atuais, filme];
+    });
+  }
+
+  function remover(id: number) {
+    setFavoritos((atuais) => atuais.filter((f) => f.movieId !== id));
+  }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-8">
-      <h1 className="text-4xl font-bold">🎬 CineMatch</h1>
-
-      {status === "carregando" && <p>Conectando à API...</p>}
-
-      {status === "ok" && (
-        <p className="text-green-600">
-          API conectada! {filmes?.toLocaleString("pt-BR")} filmes no catálogo.
+    <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center gap-8 px-4 py-16">
+      <header className="text-center">
+        <h1 className="text-4xl font-bold">CineMatch</h1>
+        <p className="mt-2 text-neutral-500">
+          Escolha até {MAX_FAVORITOS} filmes que você ama e descubra o que
+          assistir em seguida.
         </p>
-      )}
+      </header>
 
-      {status === "erro" && (
-        <p className="text-red-600">
-          Não consegui falar com a API. Ela está rodando?
-        </p>
-      )}
+      <SearchBar onSelect={adicionar} />
+
+      <section className="w-full">
+        <h2 className="mb-3 text-sm font-medium text-neutral-500">
+          Seus favoritos ({favoritos.length}/{MAX_FAVORITOS})
+        </h2>
+
+        {favoritos.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-neutral-300 p-6 text-center text-sm text-neutral-500 dark:border-neutral-700">
+            Nenhum filme escolhido ainda. Use a busca acima.
+          </p>
+        ) : (
+          <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">
+            {favoritos.map((filme) => (
+              <li key={filme.movieId} className="relative">
+                {filme.poster_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={filme.poster_url}
+                    alt={`Pôster de ${filme.title}`}
+                    className="aspect-[2/3] w-full rounded-lg object-cover shadow"
+                  />
+                ) : (
+                  <div className="flex aspect-[2/3] w-full items-center justify-center rounded-lg bg-neutral-200 p-2 text-center text-xs dark:bg-neutral-800">
+                    {filme.title}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => remover(filme.movieId)}
+                  aria-label={`Remover ${filme.title}`}
+                  className="absolute right-1 top-1 h-7 w-7 rounded-full bg-black/70 text-white hover:bg-red-600"
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </main>
   );
 }
