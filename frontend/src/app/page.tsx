@@ -1,9 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import FilterPanel from "@/components/FilterPanel";
 import MovieCard, { MovieCardSkeleton } from "@/components/MovieCard";
 import SearchBar from "@/components/SearchBar";
-import { recomendar, type Filme, type Recomendacao } from "@/lib/api";
+import {
+  buscarGeneros,
+  FILTROS_VAZIOS,
+  recomendar,
+  type Filme,
+  type Filtros,
+  type Recomendacao,
+} from "@/lib/api";
 import { tituloLegivel } from "@/lib/titulo";
 
 const MAX_FAVORITOS = 5;
@@ -11,21 +19,33 @@ const MAX_FAVORITOS = 5;
 export default function Home() {
   const [favoritos, setFavoritos] = useState<Filme[]>([]);
   const [surpresa, setSurpresa] = useState(0.6); // 0.6 equivale ao alpha = 0.4 do modelo
+  const [filtros, setFiltros] = useState<Filtros>(FILTROS_VAZIOS);
+  const [generos, setGeneros] = useState<string[]>([]);
   const [recomendacoes, setRecomendacoes] = useState<Recomendacao[]>([]);
   const [estado, setEstado] = useState<"carregando" | "ok" | "erro">("ok");
 
   const idsKey = favoritos.map((f) => f.movieId).join(",");
+  const filtrosKey = JSON.stringify(filtros);
   const alpha = Number((1 - surpresa).toFixed(2));
+
+  useEffect(() => {
+    buscarGeneros()
+      .then(setGeneros)
+      .catch(() => setGeneros([]));
+  }, []);
 
   useEffect(() => {
     if (!idsKey) return;
 
     const ids = idsKey.split(",").map(Number);
+    const filtrosAtuais: Filtros = JSON.parse(filtrosKey);
     const controle = new AbortController();
     const espera = setTimeout(async () => {
       setEstado("carregando");
       try {
-        setRecomendacoes(await recomendar(ids, alpha, controle.signal));
+        setRecomendacoes(
+          await recomendar(ids, alpha, filtrosAtuais, controle.signal),
+        );
         setEstado("ok");
       } catch (erro) {
         if ((erro as Error).name !== "AbortError") setEstado("erro");
@@ -36,7 +56,7 @@ export default function Home() {
       clearTimeout(espera);
       controle.abort();
     };
-  }, [idsKey, alpha]);
+  }, [idsKey, alpha, filtrosKey]);
 
   function adicionar(filme: Filme) {
     setFavoritos((atuais) => {
@@ -126,6 +146,12 @@ export default function Home() {
             </div>
           </section>
 
+          <FilterPanel
+            filtros={filtros}
+            generos={generos}
+            onChange={setFiltros}
+          />
+
           <section className="w-full">
             <h2 className="mb-3 text-lg font-semibold">Recomendados para você</h2>
 
@@ -143,7 +169,14 @@ export default function Home() {
               </ul>
             )}
 
-            {estado === "ok" && (
+            {estado === "ok" && recomendacoes.length === 0 && (
+              <p className="rounded-xl border border-dashed border-neutral-300 p-6 text-center text-sm text-neutral-500 dark:border-neutral-700">
+                Nenhum filme encontrado com esses filtros. Tente afrouxar algum
+                deles.
+              </p>
+            )}
+
+            {estado === "ok" && recomendacoes.length > 0 && (
               <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
                 {recomendacoes.map((filme) => (
                   <MovieCard key={filme.movieId} filme={filme} />
