@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import FilterPanel from "@/components/FilterPanel";
+import MinhasListas from "@/components/MinhasListas";
 import MovieCard, { MovieCardSkeleton } from "@/components/MovieCard";
+import PerfilGosto from "@/components/PerfilGosto";
 import SearchBar from "@/components/SearchBar";
 import {
   buscarGeneros,
@@ -12,22 +14,25 @@ import {
   type Filtros,
   type Recomendacao,
 } from "@/lib/api";
+import { idsVistos } from "@/lib/listas";
 import { tituloLegivel } from "@/lib/titulo";
-import MinhasListas from "@/components/MinhasListas";
 
 const MAX_FAVORITOS = 5;
 
 export default function Home() {
   const [favoritos, setFavoritos] = useState<Filme[]>([]);
-  const [surpresa, setSurpresa] = useState(0.6); // 0.6 equivale ao alpha = 0.4 do modelo
+  const [baseAvaliacoes, setBaseAvaliacoes] = useState<number[] | null>(null);
+  const [surpresa, setSurpresa] = useState(0.6);
   const [filtros, setFiltros] = useState<Filtros>(FILTROS_VAZIOS);
   const [generos, setGeneros] = useState<string[]>([]);
   const [recomendacoes, setRecomendacoes] = useState<Recomendacao[]>([]);
   const [estado, setEstado] = useState<"carregando" | "ok" | "erro">("ok");
 
-  const idsKey = favoritos.map((f) => f.movieId).join(",");
+  const idsBase = baseAvaliacoes ?? favoritos.map((f) => f.movieId);
+  const idsKey = idsBase.join(",");
   const filtrosKey = JSON.stringify(filtros);
   const alpha = Number((1 - surpresa).toFixed(2));
+  const temBase = idsKey !== "";
 
   useEffect(() => {
     buscarGeneros()
@@ -45,7 +50,7 @@ export default function Home() {
       setEstado("carregando");
       try {
         setRecomendacoes(
-          await recomendar(ids, alpha, filtrosAtuais, controle.signal),
+          await recomendar(ids, alpha, filtrosAtuais, idsVistos(), controle.signal),
         );
         setEstado("ok");
       } catch (erro) {
@@ -60,15 +65,28 @@ export default function Home() {
   }, [idsKey, alpha, filtrosKey]);
 
   function adicionar(filme: Filme) {
-    setFavoritos((atuais) => {
-      const jaTem = atuais.some((f) => f.movieId === filme.movieId);
-      if (jaTem || atuais.length >= MAX_FAVORITOS) return atuais;
-      return [...atuais, filme];
-    });
+    if (
+      favoritos.some((f) => f.movieId === filme.movieId) ||
+      favoritos.length >= MAX_FAVORITOS
+    ) {
+      return;
+    }
+    setBaseAvaliacoes(null);
+    setFavoritos([...favoritos, filme]);
   }
 
   function remover(id: number) {
-    setFavoritos((atuais) => atuais.filter((f) => f.movieId !== id));
+    setBaseAvaliacoes(null);
+    setFavoritos(favoritos.filter((f) => f.movieId !== id));
+  }
+
+  function recomendarPorAvaliacoes(ids: number[]) {
+    setBaseAvaliacoes(ids);
+    requestAnimationFrame(() =>
+      document
+        .getElementById("recomendados")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+    );
   }
 
   return (
@@ -122,7 +140,7 @@ export default function Home() {
         )}
       </section>
 
-      {favoritos.length > 0 && (
+      {temBase && (
         <>
           <section className="w-full max-w-xl">
             <label
@@ -153,8 +171,26 @@ export default function Home() {
             onChange={setFiltros}
           />
 
-          <section className="w-full">
-            <h2 className="mb-3 text-lg font-semibold">Recomendados para você</h2>
+          <section id="recomendados" className="w-full">
+            <h2 className="text-lg font-semibold">Recomendados para você</h2>
+            <p className="mb-3 text-sm text-neutral-500">
+              {baseAvaliacoes ? (
+                <>
+                  Baseado nas suas avaliações ({baseAvaliacoes.length}{" "}
+                  {baseAvaliacoes.length === 1 ? "filme" : "filmes"} com 4★ ou
+                  mais).{" "}
+                  <button
+                    type="button"
+                    onClick={() => setBaseAvaliacoes(null)}
+                    className="text-violet-600 hover:underline"
+                  >
+                    Usar só meus favoritos
+                  </button>
+                </>
+              ) : (
+                "Baseado nos seus filmes favoritos."
+              )}
+            </p>
 
             {estado === "erro" && (
               <p className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
@@ -187,6 +223,11 @@ export default function Home() {
           </section>
         </>
       )}
+
+      <PerfilGosto
+        onRecomendar={recomendarPorAvaliacoes}
+        ativo={baseAvaliacoes !== null}
+      />
       <MinhasListas />
     </main>
   );
