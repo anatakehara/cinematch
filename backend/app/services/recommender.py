@@ -70,6 +70,7 @@ class Recommender:
     def recommend(
         self, liked_ids, n=10, alpha=None, min_avaliacoes=None,
         generos=None, ano_min=None, ano_max=None, nota_min=None,
+        excluir=None,
     ):
         alpha = self.alpha if alpha is None else alpha
         min_aval = self.min_aval if min_avaliacoes is None else min_avaliacoes
@@ -88,6 +89,11 @@ class Recommender:
         score = alpha * z_ct + (1 - alpha) * z_cf
 
         score[idx] = -np.inf 
+        
+        if excluir:
+            fora = [int(self.pos[m]) for m in excluir if m in self.pos.index]
+            score[fora] = -np.inf
+            
         score[self.n_aval < min_aval] = -np.inf
         score[~self._filtro(generos, ano_min, ano_max, nota_min)] = -np.inf
 

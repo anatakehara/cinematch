@@ -24,3 +24,4 @@ class PedidoRecomendacao(BaseModel):
     generos: list[str] | None = Field(None, max_length=10)
     decada: int | None = Field(None, ge=1900, le=2020, description="Ex.: 1990")
     nota_min: float | None = Field(None, ge=0, le=10)
+    excluir_ids: list[int] = Field(default_factory=list, max_length=1000)

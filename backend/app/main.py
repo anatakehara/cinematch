@@ -65,6 +65,7 @@ def recommend(pedido: PedidoRecomendacao):
             ano_min=pedido.decada,
             ano_max=pedido.decada + 9 if pedido.decada else None,
             nota_min=pedido.nota_min,
+            excluir=pedido.excluir_ids,
         )
     except ValueError as erro:
         raise HTTPException(status_code=422, detail=str(erro))
