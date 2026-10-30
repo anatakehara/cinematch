@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.schemas import Filme, PedidoRecomendacao, Recomendacao
 from app.services.recommender import Recommender
 
+import os
+
 modelo: dict[str, Recommender] = {}
 
 
@@ -23,9 +25,15 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+origens = [
+    o.strip()
+    for o in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
+    if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=origens,
     allow_methods=["*"],
     allow_headers=["*"],
 )
