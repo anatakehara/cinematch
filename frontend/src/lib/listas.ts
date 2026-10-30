@@ -2,10 +2,14 @@ import { useSyncExternalStore } from "react";
 import type { Filme } from "@/lib/api";
 
 export type FilmeVisto = Filme & { nota: number };
-export type Listas = { quero: Filme[]; vistos: FilmeVisto[] };
+export type Listas = {
+  quero: Filme[];
+  vistos: FilmeVisto[];
+  favoritos: Filme[];
+};
 
 const CHAVE = "cinematch:listas:v1";
-const VAZIO: Listas = { quero: [], vistos: [] };
+const VAZIO: Listas = { quero: [], vistos: [], favoritos: [] };
 
 let cache: Listas | null = null;
 const ouvintes = new Set<() => void>();
@@ -15,7 +19,13 @@ function lerDoNavegador(): Listas {
     const bruto = localStorage.getItem(CHAVE);
     if (bruto) {
       const dados = JSON.parse(bruto);
-      if (Array.isArray(dados.quero) && Array.isArray(dados.vistos)) return dados;
+      if (Array.isArray(dados.quero) && Array.isArray(dados.vistos)) {
+        return {
+          quero: dados.quero,
+          vistos: dados.vistos,
+          favoritos: Array.isArray(dados.favoritos) ? dados.favoritos : [],
+        };
+      }
     }
   } catch {
   }
@@ -63,6 +73,21 @@ function resumo(f: Filme): Filme {
   };
 }
 
+export function adicionarFavorito(filme: Filme, limite: number) {
+  const atual = snapshotCliente();
+  const jaTem = atual.favoritos.some((f) => f.movieId === filme.movieId);
+  if (jaTem || atual.favoritos.length >= limite) return;
+  salvar({ ...atual, favoritos: [...atual.favoritos, resumo(filme)] });
+}
+
+export function removerFavorito(id: number) {
+  const atual = snapshotCliente();
+  salvar({
+    ...atual,
+    favoritos: atual.favoritos.filter((f) => f.movieId !== id),
+  });
+}
+
 export function alternarQuero(filme: Filme) {
   const atual = snapshotCliente();
   const jaTem = atual.quero.some((f) => f.movieId === filme.movieId);
@@ -78,6 +103,7 @@ export function avaliar(filme: Filme, nota: number) {
   const atual = snapshotCliente();
   const outros = atual.vistos.filter((f) => f.movieId !== filme.movieId);
   salvar({
+    ...atual,
     quero: atual.quero.filter((f) => f.movieId !== filme.movieId),
     vistos: [{ ...resumo(filme), nota }, ...outros],
   });

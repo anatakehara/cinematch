@@ -13,7 +13,9 @@ type Props = {
 
 export default function FilterPanel({ filtros, generos, onChange }: Props) {
   const ativos =
-    filtros.generos.length > 0 || filtros.decada !== null || filtros.notaMin > 0;
+    filtros.generos.length +
+    (filtros.decada !== null ? 1 : 0) +
+    (filtros.notaMin > 0 ? 1 : 0);
 
   function alternarGenero(g: string) {
     const novos = filtros.generos.includes(g)
@@ -23,51 +25,51 @@ export default function FilterPanel({ filtros, generos, onChange }: Props) {
   }
 
   return (
-    <section className="w-full space-y-4 rounded-xl border border-neutral-200 p-4 dark:border-neutral-800">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-medium text-neutral-500">Filtros</h2>
-        {ativos && (
-          <button
-            type="button"
-            onClick={() => onChange(FILTROS_VAZIOS)}
-            className="text-xs text-violet-600 hover:underline"
+    <details className="group rounded-xl border border-[var(--borda)] bg-[var(--poltrona)]">
+      <summary className="flex cursor-pointer select-none items-center justify-between px-4 py-3 text-sm font-medium">
+        <span>Filtros</span>
+        <span className="suave flex items-center gap-2">
+          {ativos > 0 ? `${ativos} ${ativos === 1 ? "ativo" : "ativos"}` : "nenhum"}
+          <span
+            aria-hidden="true"
+            className="transition-transform group-open:rotate-180"
           >
-            Limpar filtros
-          </button>
-        )}
-      </div>
+            ▾
+          </span>
+        </span>
+      </summary>
 
-      <div>
-        <p className="mb-2 text-xs text-neutral-500">Gênero</p>
-        <div className="flex flex-wrap gap-2">
-          {generos.map((g) => {
-            const marcado = filtros.generos.includes(g);
-            return (
+      <div className="space-y-5 px-4 pb-4">
+        <div>
+          <p id="filtro-generos" className="suave mb-2 text-xs">
+            Gênero (vale qualquer um dos marcados)
+          </p>
+          <div
+            role="group"
+            aria-labelledby="filtro-generos"
+            className="flex flex-wrap gap-2"
+          >
+            {generos.map((g) => (
               <button
                 key={g}
                 type="button"
-                aria-pressed={marcado}
+                className="chip"
+                aria-pressed={filtros.generos.includes(g)}
                 onClick={() => alternarGenero(g)}
-                className={`rounded-full border px-3 py-1 text-xs transition ${
-                  marcado
-                    ? "border-violet-600 bg-violet-600 text-white"
-                    : "border-neutral-300 hover:border-violet-400 dark:border-neutral-700"
-                }`}
               >
                 {generoPt(g)}
               </button>
-            );
-          })}
+            ))}
+          </div>
         </div>
-      </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label htmlFor="decada" className="mb-1 block text-xs text-neutral-500">
+          <label htmlFor="decada" className="suave mb-1 block text-xs">
             Década
           </label>
           <select
             id="decada"
+            className="campo"
             value={filtros.decada ?? ""}
             onChange={(e) =>
               onChange({
@@ -75,7 +77,6 @@ export default function FilterPanel({ filtros, generos, onChange }: Props) {
                 decada: e.target.value ? Number(e.target.value) : null,
               })
             }
-            className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
           >
             <option value="">Qualquer</option>
             {DECADAS.map((d) => (
@@ -87,9 +88,11 @@ export default function FilterPanel({ filtros, generos, onChange }: Props) {
         </div>
 
         <div>
-          <label htmlFor="nota" className="mb-1 block text-xs text-neutral-500">
-            Nota mínima:{" "}
-            {filtros.notaMin > 0 ? filtros.notaMin.toFixed(1) : "qualquer"}
+          <label htmlFor="nota" className="suave mb-1 block text-xs">
+            Nota mínima no TMDB:{" "}
+            {filtros.notaMin > 0
+              ? filtros.notaMin.toFixed(1).replace(".", ",")
+              : "qualquer"}
           </label>
           <input
             id="nota"
@@ -101,10 +104,19 @@ export default function FilterPanel({ filtros, generos, onChange }: Props) {
             onChange={(e) =>
               onChange({ ...filtros, notaMin: Number(e.target.value) })
             }
-            className="w-full accent-violet-600"
           />
         </div>
+
+        {ativos > 0 && (
+          <button
+            type="button"
+            onClick={() => onChange(FILTROS_VAZIOS)}
+            className="text-sm text-[var(--feixe-claro)] underline underline-offset-4"
+          >
+            Limpar filtros
+          </button>
+        )}
       </div>
-    </section>
+    </details>
   );
 }

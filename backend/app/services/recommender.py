@@ -47,6 +47,7 @@ class Recommender:
         self._anos = pd.to_numeric(
         self.movies["release_date"].str[:4], errors="coerce").to_numpy()
         self._notas = pd.to_numeric(self.movies["vote_average"], errors="coerce").fillna(0).to_numpy()
+        self._duracoes = pd.to_numeric(self.movies["runtime"], errors="coerce").to_numpy()
         self.generos_disponiveis = sorted(set().union(*self._generos))
 
     def search(self, trecho, n=8):
@@ -131,12 +132,16 @@ class Recommender:
     def _ficha(self, i):
         m = self.movies.iloc[i]
         poster = m["poster_path"]
+        nota = float(self._notas[i])
+        duracao = self._duracoes[i]
         return {
             "movieId": int(m["movieId"]),
             "title": m["title"],
             "year": str(m["release_date"])[:4] or None,
             "genres": sorted(self._generos[i]),
             "poster_url": f"{POSTER_BASE}{poster}" if poster else None,
+            "nota": round(nota, 1) if nota > 0 else None,
+            "duracao": int(duracao) if duracao > 0 else None,
         }
     
     def _filtro(self, generos, ano_min, ano_max, nota_min):

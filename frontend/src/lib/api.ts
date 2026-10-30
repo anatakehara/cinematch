@@ -6,6 +6,8 @@ export type Filme = {
   year: string | null;
   genres: string[];
   poster_url: string | null;
+  nota?: number | null;
+  duracao?: number | null;
 };
 
 export async function buscarFilmes(

@@ -18,7 +18,7 @@ def test_busca(client):
     filmes = r.json()
     assert filmes
     assert "Inception" in filmes[0]["title"]
-    assert {"movieId", "title", "year", "genres", "poster_url"} <= set(filmes[0])
+    assert {"movieId", "title", "year", "genres", "poster_url", "nota", "duracao"} <= set(filmes[0])
 
 
 def test_busca_curta_demais_e_rejeitada(client):

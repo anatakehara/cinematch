@@ -2,94 +2,178 @@
 
 import StarRating from "@/components/StarRating";
 import type { Recomendacao } from "@/lib/api";
+import { generoPt } from "@/lib/generos";
 import { alternarQuero, avaliar, removerVisto, useListas } from "@/lib/listas";
 import { tituloLegivel } from "@/lib/titulo";
 
-export default function MovieCard({ filme }: { filme: Recomendacao }) {
+function Poster({ filme }: { filme: Recomendacao }) {
+  const titulo = tituloLegivel(filme.title);
+  return filme.poster_url ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={filme.poster_url}
+      alt={`Pôster de ${titulo}`}
+      loading="lazy"
+      className="aspect-[2/3] w-full rounded-md object-cover"
+    />
+  ) : (
+    <div className="flex aspect-[2/3] w-full items-center justify-center rounded-md bg-[var(--poltrona)] p-3 text-center text-sm">
+      {titulo}
+    </div>
+  );
+}
+
+function formatarDuracao(min?: number | null) {
+  if (!min) return null;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return h > 0 ? `${h}h ${String(m).padStart(2, "0")}min` : `${m}min`;
+}
+
+function Meta({
+  filme,
+  className = "text-xs",
+}: {
+  filme: Recomendacao;
+  className?: string;
+}) {
+  const duracao = formatarDuracao(filme.duracao);
+  const generos = filme.genres.slice(0, 2).map(generoPt).join(", ");
+
+  return (
+    <p className={`suave flex flex-wrap items-center gap-x-2 ${className}`}>
+      {filme.year && <span className="tabular-nums">{filme.year}</span>}
+      {duracao && <span>{duracao}</span>}
+      {filme.nota != null && (
+        <span className="flex items-center gap-1">
+          <span aria-hidden="true" className="text-[var(--feixe-claro)]">
+            ★
+          </span>
+          <span className="sr-only">Nota </span>
+          {filme.nota.toFixed(1).replace(".", ",")}
+        </span>
+      )}
+      {generos && <span>{generos}</span>}
+    </p>
+  );
+}
+
+function Acoes({ filme }: { filme: Recomendacao }) {
   const { noQuero, notaDe } = useListas();
   const quero = noQuero(filme.movieId);
   const nota = notaDe(filme.movieId);
   const titulo = tituloLegivel(filme.title);
 
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-xs">
+      <button
+        type="button"
+        className="chip"
+        aria-pressed={quero}
+        disabled={nota > 0}
+        onClick={() => alternarQuero(filme)}
+      >
+        {quero ? "Na lista" : "Quero assistir"}
+      </button>
+
+      <div className="suave flex items-center gap-1">
+        <span>Já vi</span>
+        <StarRating
+          nota={nota}
+          titulo={titulo}
+          onChange={(n) =>
+            n === nota ? removerVisto(filme.movieId) : avaliar(filme, n)
+          }
+        />
+      </div>
+    </div>
+  );
+}
+
+export default function MovieCard({ filme }: { filme: Recomendacao }) {
+  const titulo = tituloLegivel(filme.title);
   const origem = filme.because.length
     ? "Porque você gostou de " + filme.because.map(tituloLegivel).join(" e ")
     : "Combina com seus favoritos";
 
-  const detalhes = [filme.year, filme.genres.slice(0, 3).join(" · ")]
-    .filter(Boolean)
-    .join(" · ");
+  return (
+    <li className="flex flex-col gap-3">
+      <Poster filme={filme} />
+
+      <div>
+        <h3 className="text-base font-semibold leading-snug">{titulo}</h3>
+        <Meta filme={filme} />
+      </div>
+
+      <p className="suave border-l-2 border-[var(--feixe)] pl-2 text-xs">
+        {origem}
+      </p>
+
+      <details className="suave text-xs">
+        <summary className="cursor-pointer select-none underline underline-offset-4">
+          Ver por quê
+        </summary>
+        <p className="mt-2 leading-relaxed">{filme.explanation}</p>
+      </details>
+
+      <Acoes filme={filme} />
+    </li>
+  );
+}
+
+export function FeaturedCard({ filme }: { filme: Recomendacao }) {
+  const titulo = tituloLegivel(filme.title);
 
   return (
-    <li className="flex flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
-      {filme.poster_url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={filme.poster_url}
-          alt={`Pôster de ${titulo}`}
-          loading="lazy"
-          className="aspect-[2/3] w-full object-cover"
-        />
-      ) : (
-        <div className="flex aspect-[2/3] w-full items-center justify-center bg-neutral-200 p-3 text-center text-sm dark:bg-neutral-800">
-          {titulo}
-        </div>
-      )}
+    <article className="relative grid gap-6 overflow-hidden rounded-2xl bg-[var(--poltrona)] p-5 sm:grid-cols-[200px_1fr] sm:p-6 md:grid-cols-[240px_1fr]">
+      {/* o feixe do projetor: o único brilho da página */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -left-16 -top-16 h-72 w-72 rounded-full opacity-25 blur-3xl"
+        style={{ background: "var(--feixe)" }}
+      />
 
-      <div className="flex flex-1 flex-col gap-2 p-3">
+      <div className="relative mx-auto w-full max-w-[240px] sm:max-w-none">
+        <Poster filme={filme} />
+      </div>
+
+      <div className="relative flex flex-col justify-center gap-4">
         <div>
-          <h3 className="font-semibold leading-tight">{titulo}</h3>
-          <p className="text-xs text-neutral-500">{detalhes}</p>
+          <h3 className="text-3xl font-bold leading-tight sm:text-4xl">
+            {titulo}
+          </h3>
+          <Meta filme={filme} className="text-sm" />
         </div>
 
-        <p className="rounded-md bg-violet-100 px-2 py-1 text-xs text-violet-800 dark:bg-violet-950 dark:text-violet-200">
-          {origem}
+        <p className="suave max-w-prose border-l-2 border-[var(--feixe)] pl-3 text-sm leading-relaxed">
+          {filme.explanation}
         </p>
 
-        <details className="text-xs text-neutral-600 dark:text-neutral-400">
-          <summary className="cursor-pointer select-none">Ver por quê</summary>
-          <p className="mt-1">{filme.explanation}</p>
-        </details>
-
-        <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-neutral-200 pt-2 dark:border-neutral-800">
-          <button
-            type="button"
-            aria-pressed={quero}
-            disabled={nota > 0}
-            onClick={() => alternarQuero(filme)}
-            className={`rounded-full border px-3 py-1 text-xs transition disabled:opacity-40 ${
-              quero
-                ? "border-violet-600 bg-violet-600 text-white"
-                : "border-neutral-300 hover:border-violet-400 dark:border-neutral-700"
-            }`}
-          >
-            {quero ? "✓ Na lista" : "+ Quero assistir"}
-          </button>
-
-          <div className="flex items-center gap-1 text-xs text-neutral-500">
-            <span>Já vi</span>
-            <StarRating
-              nota={nota}
-              titulo={titulo}
-              onChange={(n) =>
-                n === nota ? removerVisto(filme.movieId) : avaliar(filme, n)
-              }
-            />
-          </div>
-        </div>
+        <Acoes filme={filme} />
       </div>
-    </li>
+    </article>
   );
 }
 
 export function MovieCardSkeleton() {
   return (
-    <li className="animate-pulse overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-800">
-      <div className="aspect-[2/3] bg-neutral-200 dark:bg-neutral-800" />
-      <div className="space-y-2 p-3">
-        <div className="h-4 w-3/4 rounded bg-neutral-200 dark:bg-neutral-800" />
-        <div className="h-3 w-1/2 rounded bg-neutral-200 dark:bg-neutral-800" />
-        <div className="h-6 w-full rounded bg-neutral-200 dark:bg-neutral-800" />
-      </div>
+    <li className="animate-pulse space-y-3">
+      <div className="aspect-[2/3] rounded-md bg-[var(--poltrona)]" />
+      <div className="h-4 w-3/4 rounded bg-[var(--poltrona)]" />
+      <div className="h-3 w-1/2 rounded bg-[var(--poltrona)]" />
     </li>
+  );
+}
+
+export function FeaturedSkeleton() {
+  return (
+    <div className="grid animate-pulse gap-6 rounded-2xl bg-[var(--poltrona)] p-5 sm:grid-cols-[200px_1fr] sm:p-6 md:grid-cols-[240px_1fr]">
+      <div className="mx-auto aspect-[2/3] w-full max-w-[240px] rounded-md bg-[var(--borda)] sm:max-w-none" />
+      <div className="space-y-4 self-center">
+        <div className="h-8 w-2/3 rounded bg-[var(--borda)]" />
+        <div className="h-4 w-1/3 rounded bg-[var(--borda)]" />
+        <div className="h-16 w-full rounded bg-[var(--borda)]" />
+      </div>
+    </div>
   );
 }

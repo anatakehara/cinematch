@@ -6,6 +6,8 @@ class Filme(BaseModel):
     year: str | None = None
     genres: list[str]
     poster_url: str | None = None
+    nota: float | None = None
+    duracao: int | None = None
 
 
 class Recomendacao(Filme):

@@ -1,5 +1,5 @@
 type Props = {
-  nota: number;
+  nota: number; 
   onChange: (nota: number) => void;
   titulo: string;
 };
@@ -14,10 +14,10 @@ export default function StarRating({ nota, onChange, titulo }: Props) {
           onClick={() => onChange(n)}
           aria-label={`${n} ${n === 1 ? "estrela" : "estrelas"}`}
           aria-pressed={n === nota}
-          className={`px-0.5 text-lg leading-none transition ${
+          className={`px-0.5 text-xl leading-none transition-colors ${
             n <= nota
-              ? "text-amber-400"
-              : "text-neutral-300 hover:text-amber-300 dark:text-neutral-600"
+              ? "text-[var(--feixe-claro)]"
+              : "text-[var(--estrela-vazia)] hover:text-[var(--feixe-claro)]"
           }`}
         >
           ★

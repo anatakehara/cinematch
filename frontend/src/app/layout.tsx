@@ -1,29 +1,36 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Instrument_Sans, Outfit } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const titulo = Outfit({
   subsets: ["latin"],
+  variable: "--font-titulo",
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const corpo = Instrument_Sans({
   subsets: ["latin"],
+  variable: "--font-corpo",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
   title: "CineMatch",
-  description: "Recomendador de filmes que explica por que cada filme combina com você.",
+  description:
+    "Recomendador de filmes que explica por que cada filme combina com você.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export const viewport: Viewport = {
+  themeColor: "#0b0a1f",
+  colorScheme: "dark",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="pt-BR" className={`${titulo.variable} ${corpo.variable}`}>
+      <body>{children}</body>
     </html>
   );
 }
