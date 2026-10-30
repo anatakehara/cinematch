@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.schemas import Filme, PedidoRecomendacao, Recomendacao
+from app.schemas import Filme, FilmeDetalhe, PedidoRecomendacao, Recomendacao
 from app.services.recommender import Recommender
 
 import os
@@ -52,6 +52,13 @@ def genres():
 def search(q: str = Query(min_length=2), n: int = Query(8, ge=1, le=20)):
     return modelo["rec"].search(q, n=n)
 
+
+@app.get("/movies/{movie_id}", response_model=FilmeDetalhe)
+def movie_detail(movie_id: int):
+    rec = modelo["rec"]
+    if movie_id not in rec.pos.index:
+        raise HTTPException(status_code=404, detail="Filme não encontrado.")
+    return rec.details(movie_id)
 
 @app.get("/movies/{movie_id}/similar", response_model=list[Recomendacao])
 def similar(movie_id: int, n: int = Query(10, ge=1, le=30)):

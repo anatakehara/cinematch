@@ -27,3 +27,10 @@ class PedidoRecomendacao(BaseModel):
     decada: int | None = Field(None, ge=1900, le=2020, description="Ex.: 1990")
     nota_min: float | None = Field(None, ge=0, le=10)
     excluir_ids: list[int] = Field(default_factory=list, max_length=1000)
+    
+class FilmeDetalhe(Filme):
+    overview: str = ""
+    tagline: str = ""
+    directors: list[str] = []
+    cast: list[str] = []
+    n_avaliacoes: int = 0

@@ -66,3 +66,20 @@ export async function buscarGeneros(): Promise<string[]> {
   if (!resposta.ok) throw new Error("Falha ao buscar gêneros");
   return resposta.json();
 }
+
+export type FilmeDetalhe = Filme & {
+  overview: string;
+  tagline: string;
+  directors: string[];
+  cast: string[];
+  n_avaliacoes: number;
+};
+
+export async function buscarDetalhes(
+  id: number,
+  signal?: AbortSignal,
+): Promise<FilmeDetalhe> {
+  const resposta = await fetch(`${API_URL}/movies/${id}`, { signal });
+  if (!resposta.ok) throw new Error("Falha ao buscar detalhes");
+  return resposta.json();
+}

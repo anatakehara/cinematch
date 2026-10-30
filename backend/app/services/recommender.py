@@ -128,6 +128,22 @@ class Recommender:
     def _z(s):
         sd = max(float(s.std()), 1e-9)
         return (s - s.mean()) / sd, sd
+    
+    def details(self, movie_id):
+        i = int(self.pos[movie_id])
+        m = self.movies.iloc[i]
+
+        def texto(coluna):
+            valor = m[coluna]
+            return "" if pd.isna(valor) else str(valor)
+
+        ficha = self._ficha(i)
+        ficha["overview"] = texto("overview")
+        ficha["tagline"] = texto("tagline")
+        ficha["directors"] = [n for n in texto("director").split("|") if n]
+        ficha["cast"] = [n for n in texto("cast").split("|") if n][:5]
+        ficha["n_avaliacoes"] = int(self.n_aval[i])
+        return ficha
 
     def _ficha(self, i):
         m = self.movies.iloc[i]

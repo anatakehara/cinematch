@@ -9,89 +9,146 @@ import {
   type Barra,
 } from "@/lib/perfil";
 
+const CORES = [
+  "#7c4dff",
+  "#4da3ff",
+  "#2dd4bf",
+  "#8bd450",
+  "#ff9f43",
+  "#ff6b9d",
+  "#8a84a8",
+];
+
 function Grafico({ titulo, barras }: { titulo: string; barras: Barra[] }) {
   if (barras.length === 0) return null;
-  const maximo = Math.max(...barras.map((b) => b.curtidos));
+  const maximo = Math.max(...barras.map((b) => b.pct), 1);
 
   return (
     <div>
-      <h3 className="mb-2 text-sm font-medium text-neutral-500">{titulo}</h3>
+      <h3 className="mb-2 text-sm font-semibold">{titulo}</h3>
       <ul className="space-y-2">
-        {barras.map((b) => (
-          <li key={b.rotulo}>
-            <div className="mb-0.5 flex justify-between gap-2 text-xs">
-              <span>{b.rotulo}</span>
-              <span className="text-neutral-500">
-                {b.curtidos} {b.curtidos === 1 ? "filme" : "filmes"} · nota média{" "}
-                {b.notaMedia.toFixed(1).replace(".", ",")}
-              </span>
-            </div>
-            <div
-              className="h-2 overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-800"
-              aria-hidden="true"
+        {barras.map((b, i) => {
+          const cor =
+            b.rotulo === "Outros"
+              ? CORES[CORES.length - 1]
+              : CORES[i % (CORES.length - 1)];
+          return (
+            <li
+              key={b.rotulo}
+              title={`Nota média dos seus filmes aqui: ${b.notaMedia
+                .toFixed(1)
+                .replace(".", ",")} de 5`}
+              className="grid grid-cols-[0.5rem_5.5rem_minmax(0,1fr)_2.5rem] items-center gap-2 text-xs"
             >
-              <div
-                className="h-full rounded-full bg-violet-600"
-                style={{ width: `${(b.curtidos / maximo) * 100}%` }}
+              <span
+                aria-hidden="true"
+                className="h-2 w-2 rounded-full"
+                style={{ background: cor }}
               />
-            </div>
-          </li>
-        ))}
+              <span className="truncate">{b.rotulo}</span>
+              <span
+                aria-hidden="true"
+                className="h-1.5 overflow-hidden rounded-full bg-[var(--borda)]"
+              >
+                <span
+                  className="block h-full rounded-full"
+                  style={{ width: `${(b.pct / maximo) * 100}%`, background: cor }}
+                />
+              </span>
+              <span className="suave text-right tabular-nums">{b.pct}%</span>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
 }
 
-type Props = { onRecomendar: (ids: number[]) => void; ativo: boolean };
+type Props = {
+  onRecomendar: (ids: number[]) => void;
+  onVoltar: () => void;
+  ativo: boolean;
+};
 
-export default function PerfilGosto({ onRecomendar, ativo }: Props) {
+export default function PerfilGosto({ onRecomendar, onVoltar, ativo }: Props) {
   const { vistos } = useListas();
-  if (vistos.length === 0) return null;
+
+  if (vistos.length === 0) {
+    return (
+      <section className="painel p-4" aria-label="Meu perfil de gosto">
+        <h2 className="text-lg font-semibold">Meu perfil de gosto</h2>
+        <p className="suave mt-1 text-sm">
+          Dê estrelas aos filmes que você já viu. Seus gêneros e décadas
+          favoritos aparecem aqui.
+        </p>
+      </section>
+    );
+  }
 
   const { total, curtidos, media } = resumo(vistos);
   const ids = idsCurtidos(vistos);
 
   return (
-    <section
-      className="w-full space-y-5 rounded-xl border border-neutral-200 p-4 dark:border-neutral-800"
-      aria-label="Seu perfil de gosto"
-    >
-      <div>
-        <h2 className="text-lg font-semibold">Seu perfil de gosto</h2>
-        <p className="text-sm text-neutral-500">
-          {total} {total === 1 ? "filme avaliado" : "filmes avaliados"} ·{" "}
-          {curtidos} com 4★ ou mais · nota média{" "}
-          {media.toFixed(1).replace(".", ",")}
-        </p>
-        {total < 5 && (
-          <p className="mt-1 text-xs text-neutral-500">
-            Avalie mais filmes para o perfil ficar mais preciso.
+    <>
+      <section className="painel space-y-5 p-4" aria-label="Meu perfil de gosto">
+        <div>
+          <h2 className="text-lg font-semibold">Meu perfil de gosto</h2>
+          <p className="suave text-xs">
+            {total} {total === 1 ? "filme avaliado" : "filmes avaliados"} ·{" "}
+            {curtidos} com 4★ ou mais · nota média{" "}
+            {media.toFixed(1).replace(".", ",")}
+          </p>
+          {total < 5 && (
+            <p className="suave mt-1 text-xs">
+              Avalie mais filmes para o perfil ficar mais preciso.
+            </p>
+          )}
+        </div>
+
+        {curtidos > 0 ? (
+          <>
+            <Grafico titulo="Gêneros" barras={perfilGeneros(vistos)} />
+            <Grafico titulo="Décadas" barras={perfilDecadas(vistos)} />
+          </>
+        ) : (
+          <p className="suave text-sm">
+            Dê 4 ou 5 estrelas a algum filme para ver seus gêneros e décadas
+            favoritos.
           </p>
         )}
-      </div>
+      </section>
 
-      {curtidos > 0 ? (
-        <div className="grid gap-6 sm:grid-cols-2">
-          <Grafico titulo="Gêneros que você curtiu" barras={perfilGeneros(vistos)} />
-          <Grafico titulo="Décadas que você curtiu" barras={perfilDecadas(vistos)} />
+      <section className="painel flex items-start gap-3 p-4">
+        <div className="flex-1">
+          <h2 id="sw-titulo" className="text-sm font-semibold">
+            Recomendar a partir das minhas avaliações
+          </h2>
+          <p id="sw-desc" className="suave mt-1 text-xs">
+            {ids.length === 0
+              ? "Dê 4 ou 5 estrelas a algum filme para ativar."
+              : "Usa seus filmes com 4★ ou mais e nunca repete um filme já visto."}
+          </p>
         </div>
-      ) : (
-        <p className="text-sm text-neutral-500">
-          Dê 4 ou 5 estrelas a algum filme para ver seus gêneros e décadas
-          favoritos.
-        </p>
-      )}
-
-      <button
-        type="button"
-        disabled={ids.length === 0}
-        onClick={() => onRecomendar(ids)}
-        className="rounded-full bg-violet-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-violet-700 disabled:opacity-40"
-      >
-        {ativo
-          ? "Atualizar com minhas avaliações"
-          : "Recomendar a partir das minhas avaliações"}
-      </button>
-    </section>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={ativo}
+          aria-labelledby="sw-titulo"
+          aria-describedby="sw-desc"
+          disabled={!ativo && ids.length === 0}
+          onClick={() => (ativo ? onVoltar() : onRecomendar(ids))}
+          className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+            ativo ? "bg-[var(--feixe)]" : "bg-[var(--borda)]"
+          }`}
+        >
+          <span
+            aria-hidden="true"
+            className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+              ativo ? "translate-x-5" : ""
+            }`}
+          />
+        </button>
+      </section>
+    </>
   );
 }

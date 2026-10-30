@@ -25,25 +25,27 @@ import {
   useListas,
 } from "@/lib/listas";
 import { tituloLegivel } from "@/lib/titulo";
+import MovieDialog from "@/components/MovieDialog";
 
 const MAX_FAVORITOS = 5;
 
 export default function Home() {
+  // quando preenchido, as recomendações partem das avaliações e não dos favoritos
   const [baseAvaliacoes, setBaseAvaliacoes] = useState<number[] | null>(null);
-  const [surpresa, setSurpresa] = useState(0.6);
+  const [surpresa, setSurpresa] = useState(0.6); // 0.6 equivale ao alpha = 0.4 do modelo
   const [filtros, setFiltros] = useState<Filtros>(FILTROS_VAZIOS);
   const [generos, setGeneros] = useState<string[]>([]);
   const [recomendacoes, setRecomendacoes] = useState<Recomendacao[]>([]);
   const [estado, setEstado] = useState<"carregando" | "ok" | "erro">("ok");
   const [tentativa, setTentativa] = useState(0);
-    const { quero, vistos, favoritos } = useListas();
+  const { favoritos } = useListas();
+  const [aberto, setAberto] = useState<Filme | null>(null);
 
   const idsBase = baseAvaliacoes ?? favoritos.map((f) => f.movieId);
   const idsKey = idsBase.join(",");
   const filtrosKey = JSON.stringify(filtros);
   const alpha = Number((1 - surpresa).toFixed(2));
   const temBase = idsKey !== "";
-  const temListas = quero.length + vistos.length > 0;
   const [destaque, ...demais] = recomendacoes;
 
   useEffect(() => {
@@ -85,7 +87,7 @@ export default function Home() {
     setBaseAvaliacoes(null);
     removerFavorito(id);
   }
-  
+
   function recomendarPorAvaliacoes(ids: number[]) {
     setBaseAvaliacoes(ids);
     const reduzir = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -99,24 +101,14 @@ export default function Home() {
 
   return (
     <>
-      <header className="mx-auto flex max-w-7xl items-end justify-between gap-4 px-4 py-6 lg:px-8">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight">CineMatch</h1>
-          <p className="suave text-sm">
-            Diga o que você ama. Descubra o que ver depois.
-          </p>
-        </div>
-        {temListas && (
-          <a
-            href="#listas"
-            className="suave text-sm underline underline-offset-4 hover:text-[var(--texto)]"
-          >
-            Perfil e listas
-          </a>
-        )}
+      <header className="mx-auto max-w-[1600px] px-4 py-6 lg:px-8">
+        <h1 className="text-3xl font-extrabold tracking-tight">CineMatch</h1>
+        <p className="suave text-sm">
+          Diga o que você ama. Descubra o que ver depois.
+        </p>
       </header>
 
-      <main className="mx-auto grid max-w-7xl gap-10 px-4 pb-16 lg:grid-cols-[340px_minmax(0,1fr)] lg:items-start lg:px-8">
+      <main className="mx-auto grid max-w-[1600px] gap-8 px-4 pb-16 lg:grid-cols-[300px_minmax(0,1fr)] lg:items-start lg:px-8 xl:grid-cols-[300px_minmax(0,1fr)_300px]">
         <aside className="flex flex-col gap-5 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)]">
           <SearchBar
             onSelect={adicionar}
@@ -149,24 +141,32 @@ export default function Home() {
                   }
                   const titulo = tituloLegivel(filme.title);
                   return (
-                    <li key={filme.movieId} className="relative entrada">
-                      {filme.poster_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={filme.poster_url}
-                          alt={`Pôster de ${titulo}`}
-                          className="aspect-[2/3] w-full rounded-md object-cover"
-                        />
-                      ) : (
-                        <div className="flex aspect-[2/3] w-full items-center justify-center rounded-md bg-[var(--poltrona)] p-1 text-center text-[10px]">
-                          {titulo}
-                        </div>
-                      )}
+                    <li key={filme.movieId} className="entrada relative">
+                      <button
+                        type="button"
+                        onClick={() => setAberto(filme)}
+                        aria-label={`Ver detalhes de ${titulo}`}
+                        title={titulo}
+                        className="block w-full cursor-pointer rounded-md transition hover:brightness-110"
+                      >
+                        {filme.poster_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={filme.poster_url}
+                            alt=""
+                            className="aspect-[2/3] w-full rounded-md object-cover"
+                          />
+                        ) : (
+                          <div className="flex aspect-[2/3] w-full items-center justify-center rounded-md bg-[var(--poltrona)] p-1 text-center text-[10px]">
+                            {titulo}
+                          </div>
+                        )}
+                      </button>
                       <button
                         type="button"
                         onClick={() => remover(filme.movieId)}
                         aria-label={`Remover ${titulo}`}
-                        className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border border-[var(--borda)] bg-[var(--sala)] text-sm hover:text-[var(--feixe-claro)]"
+                        className="absolute -right-1 -top-1 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-[var(--borda)] bg-[var(--sala)] text-sm hover:text-[var(--feixe-claro)]"
                       >
                         ×
                       </button>
@@ -243,13 +243,6 @@ export default function Home() {
                       Baseado nas suas avaliações ({baseAvaliacoes.length}{" "}
                       {baseAvaliacoes.length === 1 ? "filme" : "filmes"} com 4★
                       ou mais).{" "}
-                      <button
-                        type="button"
-                        onClick={() => setBaseAvaliacoes(null)}
-                        className="text-[var(--feixe-claro)] underline underline-offset-4"
-                      >
-                        Usar só meus favoritos
-                      </button>
                     </>
                   ) : (
                     "Baseado nos seus filmes favoritos."
@@ -282,7 +275,7 @@ export default function Home() {
               {estado === "carregando" && (
                 <div className="space-y-8">
                   <FeaturedSkeleton />
-                  <ul className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 xl:grid-cols-4">
+                  <ul className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 2xl:grid-cols-4">
                     {Array.from({ length: 8 }).map((_, i) => (
                       <MovieCardSkeleton key={i} />
                     ))}
@@ -313,7 +306,7 @@ export default function Home() {
                   {demais.length > 0 && (
                     <div>
                       <h3 className="mb-4 text-lg font-semibold">Mais opções</h3>
-                      <ul className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 xl:grid-cols-4">
+                      <ul className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 2xl:grid-cols-4">
                         {demais.map((filme) => (
                           <MovieCard key={filme.movieId} filme={filme} />
                         ))}
@@ -325,20 +318,21 @@ export default function Home() {
             </>
           )}
         </section>
+
+        <aside
+          aria-label="Seu perfil e suas listas"
+          className="flex flex-col gap-6 lg:col-start-2 xl:sticky xl:top-6 xl:col-start-3 xl:row-start-1 xl:max-h-[calc(100vh-3rem)] xl:overflow-y-auto xl:pr-1"
+        >
+          <PerfilGosto
+            onRecomendar={recomendarPorAvaliacoes}
+            onVoltar={() => setBaseAvaliacoes(null)}
+            ativo={baseAvaliacoes !== null}
+          />
+          <MinhasListas />
+        </aside>
       </main>
 
-      <div
-        id="listas"
-        className="mx-auto flex max-w-7xl scroll-mt-6 flex-col gap-10 px-4 pb-16 lg:px-8"
-      >
-        <PerfilGosto
-          onRecomendar={recomendarPorAvaliacoes}
-          ativo={baseAvaliacoes !== null}
-        />
-        <MinhasListas />
-      </div>
-
-      <footer className="suave mx-auto max-w-7xl space-y-1 border-t border-[var(--borda)] px-4 py-8 text-xs lg:px-8">
+      <footer className="suave mx-auto max-w-[1600px] space-y-1 border-t border-[var(--borda)] px-4 py-8 text-xs lg:px-8">
         <p>
           This product uses the TMDB API but is not endorsed or certified by
           TMDB.
@@ -348,6 +342,15 @@ export default function Home() {
           Minnesota).
         </p>
       </footer>
+
+      {aberto && (
+        <MovieDialog
+          key={aberto.movieId}
+          filme={aberto}
+          onClose={() => setAberto(null)}
+          onRemoverFavorito={remover}
+        />
+      )}
     </>
   );
 }
