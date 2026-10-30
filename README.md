@@ -222,4 +222,4 @@ cinematch/
 
 ---
 
-Feito por **SEU-NOME** · [GitHub](https://github.com/anatakehara) · [LinkedIn](COLE-AQUI-SEU-LINKEDIN)
+Feito por **Ana Takehara** · [GitHub](https://github.com/anatakehara) · [LinkedIn](https://www.linkedin.com/in/ana-beatriz-takehara-231080283/)
