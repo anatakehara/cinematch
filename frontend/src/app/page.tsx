@@ -13,6 +13,7 @@ import {
   type Recomendacao,
 } from "@/lib/api";
 import { tituloLegivel } from "@/lib/titulo";
+import MinhasListas from "@/components/MinhasListas";
 
 const MAX_FAVORITOS = 5;
 
@@ -186,6 +187,7 @@ export default function Home() {
           </section>
         </>
       )}
+      <MinhasListas />
     </main>
   );
 }
