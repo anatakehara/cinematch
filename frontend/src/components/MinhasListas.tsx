@@ -1,27 +1,45 @@
 "use client";
 
 import { useState } from "react";
+import { useAbrirDetalhes } from "@/components/DetalhesProvider";
 import StarRating from "@/components/StarRating";
 import type { Filme } from "@/lib/api";
-import { avaliar, removerQuero, removerVisto, useListas } from "@/lib/listas";
+import {
+  avaliar,
+  removerQuero,
+  removerVisto,
+  useListas,
+  type FilmeVisto,
+} from "@/lib/listas";
 import { tituloLegivel } from "@/lib/titulo";
 
 const INICIAL = 6;
 
 function Capa({ filme }: { filme: Filme }) {
+  const abrir = useAbrirDetalhes();
   const titulo = tituloLegivel(filme.title);
-  return filme.poster_url ? (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={filme.poster_url}
-      alt={`Pôster de ${titulo}`}
-      loading="lazy"
-      className="aspect-[2/3] w-full rounded-md object-cover"
-    />
-  ) : (
-    <div className="flex aspect-[2/3] w-full items-center justify-center rounded-md bg-[var(--borda)] p-1 text-center text-[10px]">
-      {titulo}
-    </div>
+
+  return (
+    <button
+      type="button"
+      onClick={() => abrir(filme)}
+      aria-label={`Ver detalhes de ${titulo}`}
+      className="block w-full cursor-pointer overflow-hidden rounded-md transition hover:brightness-110"
+    >
+      {filme.poster_url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={filme.poster_url}
+          alt=""
+          loading="lazy"
+          className="aspect-[2/3] w-full object-cover"
+        />
+      ) : (
+        <div className="flex aspect-[2/3] w-full items-center justify-center bg-[var(--borda)] p-1 text-center text-[10px]">
+          {titulo}
+        </div>
+      )}
+    </button>
   );
 }
 
@@ -31,7 +49,7 @@ function BotaoRemover({ titulo, onClick }: { titulo: string; onClick: () => void
       type="button"
       onClick={onClick}
       aria-label={`Remover ${titulo}`}
-      className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border border-[var(--borda)] bg-[var(--sala)] text-sm hover:text-[var(--feixe-claro)]"
+      className="absolute -right-1 -top-1 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-[var(--borda)] bg-[var(--sala)] text-sm hover:text-[var(--feixe-claro)]"
     >
       ×
     </button>
@@ -40,12 +58,13 @@ function BotaoRemover({ titulo, onClick }: { titulo: string; onClick: () => void
 
 export default function MinhasListas() {
   const { quero, vistos } = useListas();
+  const abrir = useAbrirDetalhes();
   const [aba, setAba] = useState<"quero" | "vistos">("quero");
   const [todos, setTodos] = useState(false);
 
   if (quero.length === 0 && vistos.length === 0) return null;
 
-  const itens = aba === "quero" ? quero : vistos;
+  const itens: Filme[] = aba === "quero" ? quero : vistos;
   const visiveis = todos ? itens : itens.slice(0, INICIAL);
 
   function trocar(nova: "quero" | "vistos") {
@@ -89,7 +108,7 @@ export default function MinhasListas() {
           <ul className="grid grid-cols-3 gap-3">
             {visiveis.map((filme) => {
               const titulo = tituloLegivel(filme.title);
-              const visto = "nota" in filme ? filme : null;
+              const visto = aba === "vistos" ? (filme as FilmeVisto) : null;
               return (
                 <li key={filme.movieId} className="relative min-w-0">
                   <Capa filme={filme} />
@@ -101,9 +120,13 @@ export default function MinhasListas() {
                         : removerVisto(filme.movieId)
                     }
                   />
-                  <p className="mt-1 truncate text-[11px] leading-tight">
+                  <button
+                    type="button"
+                    onClick={() => abrir(filme)}
+                    className="mt-1 block w-full cursor-pointer truncate text-left text-[11px] leading-tight underline-offset-4 hover:underline"
+                  >
                     {titulo}
-                  </p>
+                  </button>
                   {visto && (
                     <StarRating
                       compacto

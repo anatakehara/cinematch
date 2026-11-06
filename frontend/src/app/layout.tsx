@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Instrument_Sans, Outfit } from "next/font/google";
+import { DetalhesProvider } from "@/components/DetalhesProvider";
 import "./globals.css";
 
 const titulo = Outfit({
@@ -30,7 +31,9 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="pt-BR" className={`${titulo.variable} ${corpo.variable}`}>
-      <body>{children}</body>
+      <body>
+        <DetalhesProvider>{children}</DetalhesProvider>
+      </body>
     </html>
   );
 }

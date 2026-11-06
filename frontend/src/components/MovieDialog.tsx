@@ -3,8 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import StarRating from "@/components/StarRating";
 import { buscarDetalhes, type Filme, type FilmeDetalhe } from "@/lib/api";
+import { MAX_FAVORITOS } from "@/lib/config";
 import { generoPt } from "@/lib/generos";
-import { alternarQuero, avaliar, removerVisto, useListas } from "@/lib/listas";
+import {
+  adicionarFavorito,
+  alternarQuero,
+  avaliar,
+  removerFavorito,
+  removerVisto,
+  useListas,
+} from "@/lib/listas";
 import { tituloLegivel } from "@/lib/titulo";
 
 function formatarDuracao(min?: number | null) {
@@ -17,20 +25,30 @@ function formatarDuracao(min?: number | null) {
 type Props = {
   filme: Filme;
   onClose: () => void;
-  onRemoverFavorito?: (id: number) => void;
 };
 
-export default function MovieDialog({ filme, onClose, onRemoverFavorito }: Props) {
+export default function MovieDialog({ filme, onClose }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const [detalhe, setDetalhe] = useState<FilmeDetalhe | null>(null);
   const [estado, setEstado] = useState<"carregando" | "ok" | "erro">("carregando");
-  const { noQuero, notaDe } = useListas();
+  const { noQuero, notaDe, favoritos } = useListas();
 
   const quero = noQuero(filme.movieId);
-  const nota = notaDe(filme.movieId);
+  const nota = notaDe(filme.movieId); // a SUA nota, de 1 a 5
+  const ehFavorito = favoritos.some((f) => f.movieId === filme.movieId);
+  const cheio = favoritos.length >= MAX_FAVORITOS;
   const titulo = tituloLegivel(filme.title);
-  const info = detalhe ?? filme;
-  const duracao = formatarDuracao(info.duracao);
+
+  const basico: Filme = {
+    movieId: filme.movieId,
+    title: filme.title,
+    year: filme.year,
+    genres: filme.genres,
+    poster_url: filme.poster_url,
+  };
+  const info: Filme = detalhe ?? basico;
+  const duracao = formatarDuracao(detalhe?.duracao);
+  const notaTmdb = detalhe?.nota ?? null;
 
   useEffect(() => {
     const dialogo = ref.current;
@@ -97,10 +115,10 @@ export default function MovieDialog({ filme, onClose, onRemoverFavorito }: Props
               {titulo}
             </h2>
             <p className="suave mt-1 flex flex-wrap items-center gap-x-3 text-sm">
-              {info.year && <span className="tabular-nums">{info.year}</span>}
+              {filme.year && <span className="tabular-nums">{filme.year}</span>}
               {duracao && <span>{duracao}</span>}
-              {info.nota != null && (
-                <span>TMDB {info.nota.toFixed(1).replace(".", ",")}/10</span>
+              {notaTmdb != null && (
+                <span>TMDB {notaTmdb.toFixed(1).replace(".", ",")}/10</span>
               )}
             </p>
           </div>
@@ -136,7 +154,8 @@ export default function MovieDialog({ filme, onClose, onRemoverFavorito }: Props
               {detalhe.overview && (
                 <div>
                   <h3 className="font-semibold">
-                    Sinopse <span className="suave text-xs font-normal">(em inglês)</span>
+                    Sinopse{" "}
+                    <span className="suave text-xs font-normal">(em inglês)</span>
                   </h3>
                   <p className="suave mt-1 max-w-prose leading-relaxed">
                     {detalhe.overview}
@@ -188,16 +207,27 @@ export default function MovieDialog({ filme, onClose, onRemoverFavorito }: Props
               />
             </div>
 
-            {onRemoverFavorito && (
+            {ehFavorito ? (
               <button
                 type="button"
                 className="ml-auto text-xs underline underline-offset-4 hover:text-[var(--feixe-claro)]"
-                onClick={() => {
-                  onRemoverFavorito(filme.movieId);
-                  ref.current?.close();
-                }}
+                onClick={() => removerFavorito(filme.movieId)}
               >
                 Remover dos favoritos
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="chip ml-auto"
+                disabled={cheio}
+                title={
+                  cheio
+                    ? `Você já tem ${MAX_FAVORITOS} favoritos. Remova um para adicionar outro.`
+                    : undefined
+                }
+                onClick={() => adicionarFavorito(info, MAX_FAVORITOS)}
+              >
+                {cheio ? `Favoritos cheios (${MAX_FAVORITOS})` : "Adicionar aos favoritos"}
               </button>
             )}
           </div>

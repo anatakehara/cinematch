@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAbrirDetalhes } from "@/components/DetalhesProvider";
 import FilterPanel from "@/components/FilterPanel";
 import MinhasListas from "@/components/MinhasListas";
 import MovieCard, {
@@ -18,6 +19,7 @@ import {
   type Filtros,
   type Recomendacao,
 } from "@/lib/api";
+import { MAX_FAVORITOS } from "@/lib/config";
 import {
   adicionarFavorito,
   idsVistos,
@@ -25,21 +27,20 @@ import {
   useListas,
 } from "@/lib/listas";
 import { tituloLegivel } from "@/lib/titulo";
-import MovieDialog from "@/components/MovieDialog";
-
-const MAX_FAVORITOS = 5;
 
 export default function Home() {
-  // quando preenchido, as recomendações partem das avaliações e não dos favoritos
-  const [baseAvaliacoes, setBaseAvaliacoes] = useState<number[] | null>(null);
-  const [surpresa, setSurpresa] = useState(0.6); // 0.6 equivale ao alpha = 0.4 do modelo
+  const [base, setBase] = useState<{ ids: number[]; favKey: string } | null>(null);
+  const [surpresa, setSurpresa] = useState(0.6); 
   const [filtros, setFiltros] = useState<Filtros>(FILTROS_VAZIOS);
   const [generos, setGeneros] = useState<string[]>([]);
   const [recomendacoes, setRecomendacoes] = useState<Recomendacao[]>([]);
   const [estado, setEstado] = useState<"carregando" | "ok" | "erro">("ok");
   const [tentativa, setTentativa] = useState(0);
   const { favoritos } = useListas();
-  const [aberto, setAberto] = useState<Filme | null>(null);
+  const abrirDetalhes = useAbrirDetalhes();
+
+  const favKey = favoritos.map((f) => f.movieId).join(",");
+  const baseAvaliacoes = base && base.favKey === favKey ? base.ids : null;
 
   const idsBase = baseAvaliacoes ?? favoritos.map((f) => f.movieId);
   const idsKey = idsBase.join(",");
@@ -79,17 +80,11 @@ export default function Home() {
   }, [idsKey, alpha, filtrosKey, tentativa]);
 
   function adicionar(filme: Filme) {
-    setBaseAvaliacoes(null);
     adicionarFavorito(filme, MAX_FAVORITOS);
   }
 
-  function remover(id: number) {
-    setBaseAvaliacoes(null);
-    removerFavorito(id);
-  }
-
   function recomendarPorAvaliacoes(ids: number[]) {
-    setBaseAvaliacoes(ids);
+    setBase({ ids, favKey });
     const reduzir = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     requestAnimationFrame(() =>
       document.getElementById("recomendados")?.scrollIntoView({
@@ -144,7 +139,7 @@ export default function Home() {
                     <li key={filme.movieId} className="entrada relative">
                       <button
                         type="button"
-                        onClick={() => setAberto(filme)}
+                        onClick={() => abrirDetalhes(filme)}
                         aria-label={`Ver detalhes de ${titulo}`}
                         title={titulo}
                         className="block w-full cursor-pointer rounded-md transition hover:brightness-110"
@@ -164,7 +159,7 @@ export default function Home() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => remover(filme.movieId)}
+                        onClick={() => removerFavorito(filme.movieId)}
                         aria-label={`Remover ${titulo}`}
                         className="absolute -right-1 -top-1 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-[var(--borda)] bg-[var(--sala)] text-sm hover:text-[var(--feixe-claro)]"
                       >
@@ -243,6 +238,13 @@ export default function Home() {
                       Baseado nas suas avaliações ({baseAvaliacoes.length}{" "}
                       {baseAvaliacoes.length === 1 ? "filme" : "filmes"} com 4★
                       ou mais).{" "}
+                      <button
+                        type="button"
+                        onClick={() => setBase(null)}
+                        className="text-[var(--feixe-claro)] underline underline-offset-4"
+                      >
+                        Usar só meus favoritos
+                      </button>
                     </>
                   ) : (
                     "Baseado nos seus filmes favoritos."
@@ -325,7 +327,7 @@ export default function Home() {
         >
           <PerfilGosto
             onRecomendar={recomendarPorAvaliacoes}
-            onVoltar={() => setBaseAvaliacoes(null)}
+            onVoltar={() => setBase(null)}
             ativo={baseAvaliacoes !== null}
           />
           <MinhasListas />
@@ -342,15 +344,6 @@ export default function Home() {
           Minnesota).
         </p>
       </footer>
-
-      {aberto && (
-        <MovieDialog
-          key={aberto.movieId}
-          filme={aberto}
-          onClose={() => setAberto(null)}
-          onRemoverFavorito={remover}
-        />
-      )}
     </>
   );
 }
